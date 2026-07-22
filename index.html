@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bóveda de Recuerdos</title>
+
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .tarjeta {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            text-align: center;
+            max-width: 420px;
+            width: 90%;
+            animation: aparecer 0.4s ease-out;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        @keyframes aparecer {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #boveda { display: none; }
+
+        .tarjeta.saliendo {
+            opacity: 0;
+            transform: scale(0.92);
+        }
+
+        input {
+            padding: 10px;
+            margin: 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 80%;
+            font-size: 16px;
+            text-align: center;
+        }
+        input:focus { outline: none; border-color: #d81b60; }
+
+        button {
+            padding: 10px 24px;
+            background-color: #d81b60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #ad144d; }
+
+        #mensaje-error {
+            color: #d81b60;
+            display: none;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .carta {
+            text-align: left;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        /* ---- Escena final con video de fondo transparente ---- */
+        #escena-final {
+            display: none;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+        #escena-final.visible {
+            display: block;
+            animation: fundido-entrada 1.2s ease forwards;
+        }
+        @keyframes fundido-entrada {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        #video-fondo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
+            z-index: 0;
+            opacity: 0.18; /* transparencia del video de fondo */
+        }
+
+        /* ---- Carrusel de recuerdos ---- */
+        .contenido-escena {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .carrusel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .flecha {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            font-size: 28px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            user-select: none;
+            z-index: 3;
+        }
+        .flecha:hover { background: rgba(255,255,255,0.3); }
+        #flecha-izq { left: 20px; }
+        #flecha-der { right: 20px; }
+
+        .visor {
+            width: 100%;
+            max-width: 420px;
+            aspect-ratio: 4 / 5;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .visor img, .visor video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            animation: fundido-entrada 0.5s ease;
+        }
+
+        #comentario {
+            margin-top: 20px;
+            color: white;
+            text-align: center;
+            font-size: 16px;
+            line-height: 1.5;
+            max-width: 480px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+            min-height: 24px;
+        }
+
+        #indicador {
+            margin-top: 10px;
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+        }
+
+        /* ---- Botón "Mi SISA" (se desbloquea al completar el ciclo) ---- */
+        #boton-mi-sisa {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 4;
+            animation: aparecer 0.5s ease-out;
+        }
+
+        /* ---- Sección "Mi SISA" ---- */
+        #seccion-mi-sisa {
+            display: none;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+        }
+        #seccion-mi-sisa.visible {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            animation: fundido-entrada 0.8s ease forwards;
+        }
+        #btn-regresar {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+        }
+
+        /* ---- Carrusel dentro de la sección "Mi SISA" ---- */
+        #titulo-sisa {
+            color: #ad144d;
+            margin-bottom: 10px;
+        }
+        .carrusel-sisa {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        .flecha-sisa {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(216,27,96,0.1);
+            border: 1px solid rgba(216,27,96,0.3);
+            color: #d81b60;
+            font-size: 28px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            user-select: none;
+            z-index: 6;
+        }
+        .flecha-sisa:hover { background: rgba(216,27,96,0.2); }
+        #flecha-izq-sisa { left: 20px; }
+        #flecha-der-sisa { right: 20px; }
+
+        .visor-sisa {
+            width: 100%;
+            max-width: 420px;
+            aspect-ratio: 4 / 5;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .visor-sisa img, .visor-sisa video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            animation: fundido-entrada 0.5s ease;
+        }
+
+        #comentario-sisa {
+            margin-top: 20px;
+            color: #444;
+            text-align: center;
+            font-size: 16px;
+            line-height: 1.5;
+            max-width: 480px;
+            min-height: 24px;
+        }
+
+        #indicador-sisa {
+            margin-top: 10px;
+            color: #999;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla de Bloqueo -->
+    <div id="pantalla-bloqueo" class="tarjeta">
+        <h2>Acceso Restringido </h2>
+        <p>Ingresa la clave secreta para entrar :</p>
+        <input type="password" id="clave" placeholder="Contraseña" autocomplete="off">
+        <br>
+        <button id="btn-desbloquear">Desbloquear</button>
+        <p id="mensaje-error">Clave incorrecta. Inténtalo de nuevo.</p>
+    </div>
+
+    <!-- Bóveda Secreta -->
+    <div id="boveda" class="tarjeta">
+        <h2>¡Bienvenida Sisa! ❤️</h2>
+        <div class="carta">
+            <p>Hola, tú sabes que no soy de escribir cartas físicas ni nada de eso, así que decidí hacerlo a mi manera: de forma digital. Antes de que nos diéramos un tiempo, ya estaba armando esta página, como un resumen de los recuerdos que hemos tenido en este tiempo, con fotos que tengo guardadas en el cel.</p>
+        </div>
+        <button id="btn-bienvenida">BIENVENIDA</button>
+    </div>
+
+    <!-- Escena final: video de fondo transparente + carrusel de recuerdos -->
+    <div id="escena-final">
+        <video id="video-fondo" autoplay muted loop playsinline>
+            <source src="fondo.mp4" type="video/mp4">
+        </video>
+
+        <div class="contenido-escena">
+            <div class="carrusel">
+                <div class="flecha" id="flecha-izq">‹</div>
+                <div class="visor" id="visor"></div>
+                <div class="flecha" id="flecha-der">›</div>
+            </div>
+            <p id="comentario"></p>
+            <p id="indicador"></p>
+        </div>
+
+        <button id="boton-mi-sisa">Mi SISA</button>
+    </div>
+
+    <!-- Sección "Mi SISA": se desbloquea al completar el ciclo de recuerdos -->
+    <div id="seccion-mi-sisa">
+        <button id="btn-regresar">← Regresar</button>
+        <h2 id="titulo-sisa">Fotos de mi Sisa 🤎</h2>
+
+        <div class="carrusel-sisa">
+            <div class="flecha-sisa" id="flecha-izq-sisa">‹</div>
+            <div class="visor-sisa" id="visor-sisa"></div>
+            <div class="flecha-sisa" id="flecha-der-sisa">›</div>
+        </div>
+        <p id="comentario-sisa"></p>
+        <p id="indicador-sisa"></p>
+    </div>
+
+    <script>
+        // Cambia esta clave por la que prefieras (una fecha, un apodo, etc.)
+        const CLAVE_SECRETA = "0209";
+
+        const pantalla = document.getElementById("pantalla-bloqueo");
+        const boveda = document.getElementById("boveda");
+        const error = document.getElementById("mensaje-error");
+        const campoClave = document.getElementById("clave");
+        const btnBienvenida = document.getElementById("btn-bienvenida");
+        const escenaFinal = document.getElementById("escena-final");
+
+        function verificarClave() {
+            if (campoClave.value === CLAVE_SECRETA) {
+                pantalla.style.display = "none";
+                boveda.style.display = "block";
+            } else {
+                error.style.display = "block";
+                campoClave.value = "";
+                campoClave.focus();
+            }
+        }
+
+        document.getElementById("btn-desbloquear").addEventListener("click", verificarClave);
+        campoClave.addEventListener("keyup", function(event) {
+            if (event.key === "Enter") verificarClave();
+        });
+
+        btnBienvenida.addEventListener("click", function() {
+            boveda.classList.add("saliendo");
+            setTimeout(function() {
+                boveda.style.display = "none";
+                escenaFinal.classList.add("visible");
+            }, 600);
+        });
+
+        
+        const recuerdos = [
+            { tipo: "imagen", src: "1.png",  comentario: "...." },
+            { tipo: "imagen", src: "2.png",  comentario: "...." },
+            { tipo: "imagen", src: "3.png",  comentario: "...." },
+            { tipo: "imagen", src: "4.jpg",  comentario: "...." },
+            { tipo: "imagen", src: "5.jpg",  comentario: "...." },
+            { tipo: "imagen", src: "6.jpg",  comentario: "...." },
+            { tipo: "imagen", src: "7.jpg",  comentario: "...." },
+            { tipo: "imagen", src: "8.png",  comentario: "...." },
+            { tipo: "imagen", src: "9.jpg",  comentario: "...." },
+            
+            { tipo: "video",  src: "11.mp4", comentario: "...." },
+            { tipo: "video",  src: "12.mp4", comentario: "...." },
+            { tipo: "imagen", src: "13.png", comentario: "...." },
+           
+            { tipo: "imagen", src: "15.jpg", comentario: "...." }
+        ];
+
+        let indiceActual = 0;
+        const visor = document.getElementById("visor");
+        const comentario = document.getElementById("comentario");
+        const indicador = document.getElementById("indicador");
+
+        function mostrarRecuerdo(indice) {
+            const item = recuerdos[indice];
+            visor.innerHTML = "";
+
+            if (item.tipo === "video") {
+                const video = document.createElement("video");
+                video.src = item.src;
+                video.controls = true;
+                video.playsInline = true;
+                visor.appendChild(video);
+            } else {
+                const img = document.createElement("img");
+                img.src = item.src;
+                img.alt = "Recuerdo";
+                visor.appendChild(img);
+            }
+
+            comentario.textContent = item.comentario;
+            indicador.textContent = (indice + 1) + " / " + recuerdos.length;
+        }
+
+        document.getElementById("flecha-izq").addEventListener("click", function() {
+            indiceActual = (indiceActual - 1 + recuerdos.length) % recuerdos.length;
+            mostrarRecuerdo(indiceActual);
+        });
+
+        document.getElementById("flecha-der").addEventListener("click", function() {
+            const eraUltimo = indiceActual === recuerdos.length - 1;
+            indiceActual = (indiceActual + 1) % recuerdos.length;
+            mostrarRecuerdo(indiceActual);
+
+            // Al pasar de la última imagen (15) de vuelta a la primera, se desbloquea el botón
+            if (eraUltimo && indiceActual === 0) {
+                botonMiSisa.style.display = "inline-block";
+            }
+        });
+
+        // Mostrar el primer recuerdo apenas se cargue la página
+        mostrarRecuerdo(indiceActual);
+
+        // ---------------------------------------------------------------
+        // Sección "Mi SISA"
+        // ---------------------------------------------------------------
+        const botonMiSisa = document.getElementById("boton-mi-sisa");
+        const contenidoEscena = document.querySelector(".contenido-escena");
+        const seccionMiSisa = document.getElementById("seccion-mi-sisa");
+        const btnRegresar = document.getElementById("btn-regresar");
+
+        botonMiSisa.addEventListener("click", function() {
+            contenidoEscena.style.display = "none";
+            botonMiSisa.style.display = "none";
+            seccionMiSisa.classList.add("visible");
+        });
+
+        btnRegresar.addEventListener("click", function() {
+            seccionMiSisa.classList.remove("visible");
+            contenidoEscena.style.display = "flex";
+            botonMiSisa.style.display = "inline-block";
+        });
+
+        // ---------------------------------------------------------------
+        // Carrusel de la sección "Mi SISA" (imágenes 16 a 23)
+        // Ajusta src/comentario igual que en la lista "recuerdos" de arriba.
+        // ---------------------------------------------------------------
+        const recuerdosSisa = [
+            { tipo: "imagen", src: "16.jpg", comentario: "...." },
+            { tipo: "imagen", src: "17.jpg", comentario: "...." },
+            { tipo: "imagen", src: "18.jpg", comentario: "...." },
+            { tipo: "imagen", src: "19.jpg", comentario: "...." },
+            { tipo: "imagen", src: "20.jpg", comentario: "...." },
+            { tipo: "imagen", src: "21.jpg", comentario: "...." },
+            { tipo: "imagen", src: "22.jpg", comentario: "...." },
+            { tipo: "imagen", src: "23.jpg", comentario: "...." }
+        ];
+
+        let indiceSisa = 0;
+        const visorSisa = document.getElementById("visor-sisa");
+        const comentarioSisa = document.getElementById("comentario-sisa");
+        const indicadorSisa = document.getElementById("indicador-sisa");
+
+        function mostrarRecuerdoSisa(indice) {
+            const item = recuerdosSisa[indice];
+            visorSisa.innerHTML = "";
+
+            if (item.tipo === "video") {
+                const video = document.createElement("video");
+                video.src = item.src;
+                video.controls = true;
+                video.playsInline = true;
+                visorSisa.appendChild(video);
+            } else {
+                const img = document.createElement("img");
+                img.src = item.src;
+                img.alt = "Recuerdo";
+                visorSisa.appendChild(img);
+            }
+
+            comentarioSisa.textContent = item.comentario;
+            indicadorSisa.textContent = (indice + 1) + " / " + recuerdosSisa.length;
+        }
+
+        document.getElementById("flecha-izq-sisa").addEventListener("click", function() {
+            indiceSisa = (indiceSisa - 1 + recuerdosSisa.length) % recuerdosSisa.length;
+            mostrarRecuerdoSisa(indiceSisa);
+        });
+
+        document.getElementById("flecha-der-sisa").addEventListener("click", function() {
+            indiceSisa = (indiceSisa + 1) % recuerdosSisa.length;
+            mostrarRecuerdoSisa(indiceSisa);
+        });
+
+        mostrarRecuerdoSisa(indiceSisa);
+    </script>
+
+</body>
+</html>
